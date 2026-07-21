@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Server</title>
+  <style>
+    body { font-family: sans-serif; max-width: 640px; margin: 80px auto; padding: 0 16px; }
+    h1 { font-size: 1.5rem; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    ul { line-height: 2; }
+  </style>
+</head>
+<body>
+  <h1>API Server</h1>
+  <p>Available endpoints:</p>
+  <ul>
+    <li><code>GET /api/healthz</code> — health check</li>
+    <li><code>POST /api/analyze</code> — analyze job posting &amp; CV with Claude</li>
+    <li><code>POST /api/extract-cv</code> — extract text from a .docx file</li>
+  </ul>
+</body>
+</html>
