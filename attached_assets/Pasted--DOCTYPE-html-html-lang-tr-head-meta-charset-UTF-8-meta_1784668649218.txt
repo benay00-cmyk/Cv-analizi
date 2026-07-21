@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Analizi — Benay Aktaş</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Georgia',serif;background:#FAFAF8;color:#1C1917;min-height:100vh}
+.sans{font-family:'Inter',sans-serif}
+:root{--gold:#9A7B3C;--gold-light:#F0E8D5;--gold-mid:#C4A05A;--bg:#FAFAF8;--surface:#fff;--surface-alt:#F5F3EF;--border:#E8E4DC;--text:#1C1917;--text-mid:#57534E;--text-light:#A8A29E;--green:#166534;--green-bg:#F0FDF4;--green-border:#BBF7D0;--amber:#92400E;--amber-bg:#FFFBEB;--amber-border:#FDE68A;--red:#991B1B;--red-bg:#FFF1F2;--red-border:#FECDD3}
+nav{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;height:60px}
+.logo-icon{width:34px;height:34px;border-radius:9px;background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gold);font-weight:700}
+.page{max-width:580px;margin:0 auto;padding:0 20px 60px;width:100%}
+.hero{padding:48px 0 32px;border-bottom:1px solid var(--border);margin-bottom:28px}
+h1{font-size:40px;font-weight:400;line-height:1.1;letter-spacing:-1.5px;margin-bottom:16px}
+h1 em{color:var(--gold)}
+.card{background:#fff;border-radius:14px;padding:22px;border:1px solid var(--border);margin-bottom:16px}
+.field-label{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:13px 15px;font-size:14px;font-family:'Inter',sans-serif;background:var(--bg);resize:vertical;color:var(--text);line-height:1.65;outline:none}
+textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-light)}
+.cv-modes{display:flex;gap:8px;margin-bottom:12px}
+.mode-btn{padding:7px 14px;font-size:12px;font-weight:600;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Inter',sans-serif}
+.mode-btn.active{border-color:var(--gold);background:var(--gold-light);color:var(--gold)}
+.upload-zone{border:2px dashed #D4CEC3;border-radius:10px;padding:24px;text-align:center;cursor:pointer;background:var(--bg)}
+.upload-zone.has-file{border-color:var(--green);border-style:solid;background:var(--green-bg)}
+.btn-primary{background:var(--gold);color:#fff;border:none;border-radius:10px;padding:13px 20px;width:100%;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:16px}
+.btn-secondary{background:none;border:1.5px solid var(--border);border-radius:10px;padding:11px 20px;width:100%;font-size:14px;color:var(--text-mid);cursor:pointer;font-family:'Inter',sans-serif;margin-top:16px}
+.error-box{margin-top:12px;padding:12px 16px;background:var(--red-bg);border-radius:10px;font-size:12px;color:var(--red);border:1px solid var(--red-border);font-family:'Inter',sans-serif;display:none}
+.loading-wrap{display:none;align-items:center;justify-content:center;padding:24px;min-height:70vh}
+.loading-card{background:#fff;border-radius:20px;padding:52px 36px;text-align:center;max-width:360px;width:100%;border:1px solid var(--border)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin 1.6s linear infinite;font-size:32px;color:var(--gold);margin-bottom:24px}
+.progress-bar{background:var(--surface-alt);border-radius:100px;height:5px;overflow:hidden;margin-bottom:10px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#C4A05A,#9A7B3C);border-radius:100px;width:5%;transition:width .5s}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1.5px solid var(--border);margin-bottom:20px;padding-bottom:2px}
+.tab{padding:7px 13px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;border-radius:8px;color:var(--text-mid)}
+.tab.active{background:var(--gold-light);color:var(--gold);font-weight:700}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.section-label{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:14px;color:var(--gold)}
+.q-card{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:12px}
+.q-badge{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;color:var(--gold);background:var(--gold-light);padding:4px 10px;border
