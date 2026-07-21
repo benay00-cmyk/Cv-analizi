@@ -3,21 +3,531 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API Server</title>
+  <title>CV Analysis Tool</title>
   <style>
-    body { font-family: sans-serif; max-width: 640px; margin: 80px auto; padding: 0 16px; }
-    h1 { font-size: 1.5rem; }
-    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-    ul { line-height: 2; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f8f9fb;
+      --surface: #ffffff;
+      --border: #e2e5ea;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --text: #111827;
+      --muted: #6b7280;
+      --success: #059669;
+      --error: #dc2626;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 16px 80px;
+      line-height: 1.6;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 32px;
+      max-width: 860px;
+      margin: 0 auto 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 240px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fcfcfd;
+      resize: vertical;
+      transition: border-color .15s, box-shadow .15s;
+      line-height: 1.55;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+      background: #fff;
+    }
+    textarea::placeholder { color: #c0c5ce; }
+
+    .prompt-row { margin-top: 20px; }
+    .prompt-row textarea { height: 90px; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button[type="submit"] {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 26px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    button[type="submit"]:hover { background: var(--primary-hover); }
+    button[type="submit"]:active { transform: scale(.98); }
+    button[type="submit"]:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    button[type="submit"].loading .spinner { display: block; }
+    button[type="submit"].loading .btn-text { opacity: .8; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result area ── */
+    #result-section { display: none; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .result-header h2 { font-size: 1.05rem; font-weight: 700; }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+    .badge-success { background: #d1fae5; color: var(--success); }
+    .badge-error   { background: #fee2e2; color: var(--error); }
+
+    /* ── JSON tree renderer ── */
+    .json-tree {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 22px;
+      overflow: auto;
+      font-family: "SF Mono", "Fira Code", Menlo, monospace;
+      font-size: 0.83rem;
+      line-height: 1.8;
+    }
+    .jk { color: #7c3aed; font-weight: 600; }   /* key */
+    .js { color: #059669; }                       /* string */
+    .jn { color: #d97706; }                       /* number */
+    .jb { color: #2563eb; }                       /* boolean */
+    .jnull { color: #9ca3af; font-style: italic; }
+
+    /* ── Structured analysis cards ── */
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .stat-card .stat-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #3b82f6;
+      margin-bottom: 4px;
+    }
+    .stat-card .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .score-bar-wrap { margin-bottom: 20px; }
+    .score-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .score-bar {
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #2563eb, #7c3aed);
+      transition: width .6s ease;
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 20px 0 10px;
+    }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+    .tag.match { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+    .tag.gap   { background: #fee2e2; border-color: #fca5a5; color: #7f1d1d; }
+
+    .prose-block {
+      background: #f9fafb;
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .raw-toggle {
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .raw-toggle summary {
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      user-select: none;
+    }
+    .raw-toggle summary:hover { color: var(--text); }
+    .raw-toggle .json-tree { margin-top: 12px; }
+
+    .error-box {
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      border-radius: 8px;
+      padding: 16px;
+      color: var(--error);
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
-  <h1>API Server</h1>
-  <p>Available endpoints:</p>
-  <ul>
-    <li><code>GET /api/healthz</code> — health check</li>
-    <li><code>POST /api/analyze</code> — analyze job posting &amp; CV with Claude</li>
-    <li><code>POST /api/extract-cv</code> — extract text from a .docx file</li>
-  </ul>
+
+<header>
+  <h1>CV Analysis Tool</h1>
+  <p>Paste a job posting and a candidate's CV to get an AI-powered HR analysis.</p>
+</header>
+
+<!-- Input card -->
+<div class="card">
+  <form id="analyze-form">
+    <div class="grid">
+      <div>
+        <label for="ilan">Job Posting</label>
+        <textarea id="ilan" name="ilan" placeholder="Paste the job posting here…" required></textarea>
+      </div>
+      <div>
+        <label for="cv">Candidate CV</label>
+        <textarea id="cv" name="cv" placeholder="Paste the candidate's CV here…" required></textarea>
+      </div>
+    </div>
+
+    <div class="prompt-row">
+      <label for="prompt">Custom Instruction <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — overrides both fields above)</span></label>
+      <textarea id="prompt" name="prompt" placeholder="Leave blank to use the job posting + CV above, or write a custom instruction for Claude…"></textarea>
+    </div>
+
+    <div class="actions">
+      <button type="submit" id="submit-btn">
+        <span class="spinner"></span>
+        <span class="btn-text">Analyze</span>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Result card -->
+<div class="card" id="result-section">
+  <div class="result-header">
+    <h2>Analysis Result</h2>
+    <span class="badge" id="status-badge"></span>
+  </div>
+  <div id="result-body"></div>
+</div>
+
+<script>
+  const form      = document.getElementById('analyze-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const resultSec = document.getElementById('result-section');
+  const resultBody= document.getElementById('result-body');
+  const statusBadge = document.getElementById('status-badge');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ilan   = document.getElementById('ilan').value.trim();
+    const cv     = document.getElementById('cv').value.trim();
+    const prompt = document.getElementById('prompt').value.trim();
+
+    setLoading(true);
+
+    try {
+      const body = prompt ? { prompt } : { ilan, cv };
+      const res  = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const raw = await res.json();
+      setLoading(false);
+      showResult(res.ok, raw);
+    } catch (err) {
+      setLoading(false);
+      showError(err.message || 'Network error');
+    }
+  });
+
+  function setLoading(on) {
+    submitBtn.disabled = on;
+    submitBtn.classList.toggle('loading', on);
+    document.querySelector('.btn-text').textContent = on ? 'Analyzing…' : 'Analyze';
+  }
+
+  function showResult(ok, raw) {
+    resultSec.style.display = 'block';
+    resultSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (!ok) {
+      statusBadge.className = 'badge badge-error';
+      statusBadge.textContent = 'Error';
+      resultBody.innerHTML = `<div class="error-box">${escHtml(raw.error || JSON.stringify(raw))}</div>`;
+      return;
+    }
+
+    statusBadge.className = 'badge badge-success';
+    statusBadge.textContent = 'Success';
+
+    // Extract text content from Claude response
+    let parsed = null;
+    let claudeText = null;
+    try {
+      const content = raw.result?.content;
+      if (Array.isArray(content)) {
+        claudeText = content.map(b => b.text || '').join('');
+      } else if (typeof content === 'string') {
+        claudeText = content;
+      }
+      if (claudeText) parsed = JSON.parse(claudeText);
+    } catch (_) { /* not JSON — render raw */ }
+
+    resultBody.innerHTML = '';
+
+    if (parsed) {
+      resultBody.appendChild(renderStructured(parsed));
+      const details = document.createElement('details');
+      details.className = 'raw-toggle';
+      details.innerHTML = `<summary>Show raw JSON response</summary>`;
+      const tree = document.createElement('div');
+      tree.className = 'json-tree';
+      tree.innerHTML = jsonToHtml(raw);
+      details.appendChild(tree);
+      resultBody.appendChild(details);
+    } else if (claudeText) {
+      const p = document.createElement('div');
+      p.className = 'prose-block';
+      p.textContent = claudeText;
+      resultBody.appendChild(p);
+    } else {
+      const tree = document.createElement('div');
+      tree.className = 'json-tree';
+      tree.innerHTML = jsonToHtml(raw);
+      resultBody.appendChild(tree);
+    }
+  }
+
+  function showError(msg) {
+    resultSec.style.display = 'block';
+    statusBadge.className = 'badge badge-error';
+    statusBadge.textContent = 'Error';
+    resultBody.innerHTML = `<div class="error-box">${escHtml(msg)}</div>`;
+  }
+
+  /* ── Structured renderer for common HR JSON shapes ── */
+  function renderStructured(obj) {
+    const wrap = document.createElement('div');
+
+    // Score / uyumluluk
+    const scoreKey = findKey(obj, ['score','skor','uyumluluk','uyum_skoru','match_score','compatibility']);
+    if (scoreKey !== null) {
+      const val = parseFloat(obj[scoreKey]);
+      if (!isNaN(val)) {
+        const pct = val <= 1 ? val * 100 : val;
+        wrap.innerHTML += `
+          <div class="score-bar-wrap">
+            <div class="score-bar-label">
+              <span>${labelFor(scoreKey)}</span>
+              <span>${Math.round(pct)}%</span>
+            </div>
+            <div class="score-bar"><div class="score-bar-fill" style="width:${Math.min(pct,100)}%"></div></div>
+          </div>`;
+      }
+    }
+
+    // Stat cards for simple key:value pairs
+    const statKeys = Object.keys(obj).filter(k => {
+      const v = obj[k];
+      return (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') && k !== scoreKey;
+    });
+    if (statKeys.length) {
+      const grid = document.createElement('div');
+      grid.className = 'analysis-grid';
+      statKeys.forEach(k => {
+        grid.innerHTML += `<div class="stat-card"><div class="stat-label">${labelFor(k)}</div><div class="stat-value">${escHtml(String(obj[k]))}</div></div>`;
+      });
+      wrap.appendChild(grid);
+    }
+
+    // Array fields — skills, matches, gaps, etc.
+    Object.keys(obj).forEach(k => {
+      const v = obj[k];
+      if (!Array.isArray(v)) return;
+
+      wrap.innerHTML += `<div class="section-title">${labelFor(k)}</div>`;
+      const isGap   = /gap|eksik|missing|yetersiz/i.test(k);
+      const isMatch = /match|uyuml|güçlü|strong/i.test(k);
+      const tagList = document.createElement('div');
+      tagList.className = 'tag-list';
+      v.forEach(item => {
+        const cls = isGap ? 'tag gap' : isMatch ? 'tag match' : 'tag';
+        tagList.innerHTML += `<span class="${cls}">${escHtml(String(item))}</span>`;
+      });
+      wrap.appendChild(tagList);
+    });
+
+    // Nested object fields (e.g. degerlendirme: {...})
+    Object.keys(obj).forEach(k => {
+      const v = obj[k];
+      if (typeof v !== 'object' || v === null || Array.isArray(v)) return;
+      wrap.innerHTML += `<div class="section-title">${labelFor(k)}</div>`;
+      const sub = document.createElement('div');
+      sub.className = 'analysis-grid';
+      Object.keys(v).forEach(sk => {
+        sub.innerHTML += `<div class="stat-card"><div class="stat-label">${labelFor(sk)}</div><div class="stat-value">${escHtml(String(v[sk]))}</div></div>`;
+      });
+      wrap.appendChild(sub);
+    });
+
+    return wrap;
+  }
+
+  /* ── Syntax-highlighted JSON ── */
+  function jsonToHtml(val, indent = 0) {
+    const pad  = '  '.repeat(indent);
+    const pad1 = '  '.repeat(indent + 1);
+    if (val === null) return `<span class="jnull">null</span>`;
+    if (typeof val === 'boolean') return `<span class="jb">${val}</span>`;
+    if (typeof val === 'number')  return `<span class="jn">${val}</span>`;
+    if (typeof val === 'string')  return `<span class="js">"${escHtml(val)}"</span>`;
+    if (Array.isArray(val)) {
+      if (!val.length) return '[]';
+      const items = val.map(v => `${pad1}${jsonToHtml(v, indent + 1)}`).join(',\n');
+      return `[\n${items}\n${pad}]`;
+    }
+    if (typeof val === 'object') {
+      const keys = Object.keys(val);
+      if (!keys.length) return '{}';
+      const items = keys.map(k =>
+        `${pad1}<span class="jk">"${escHtml(k)}"</span>: ${jsonToHtml(val[k], indent + 1)}`
+      ).join(',\n');
+      return `{\n${items}\n${pad}}`;
+    }
+    return escHtml(String(val));
+  }
+
+  function findKey(obj, candidates) {
+    for (const c of candidates) {
+      const found = Object.keys(obj).find(k => k.toLowerCase() === c.toLowerCase());
+      if (found !== undefined) return found;
+    }
+    return null;
+  }
+
+  function labelFor(key) {
+    return key.replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2')
+      .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
 </body>
 </html>
