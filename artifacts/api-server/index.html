@@ -1,533 +1,327 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CV Analysis Tool</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #f8f9fb;
-      --surface: #ffffff;
-      --border: #e2e5ea;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --primary-light: #eff6ff;
-      --text: #111827;
-      --muted: #6b7280;
-      --success: #059669;
-      --error: #dc2626;
-      --radius: 10px;
-      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 40px 16px 80px;
-      line-height: 1.6;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 36px;
-    }
-    header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    header p {
-      color: var(--muted);
-      margin-top: 6px;
-      font-size: 0.95rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 28px 32px;
-      max-width: 860px;
-      margin: 0 auto 24px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
-
-    label {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    textarea {
-      width: 100%;
-      height: 240px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-family: inherit;
-      color: var(--text);
-      background: #fcfcfd;
-      resize: vertical;
-      transition: border-color .15s, box-shadow .15s;
-      line-height: 1.55;
-    }
-    textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
-      background: #fff;
-    }
-    textarea::placeholder { color: #c0c5ce; }
-
-    .prompt-row { margin-top: 20px; }
-    .prompt-row textarea { height: 90px; }
-
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    button[type="submit"] {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 11px 26px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s, transform .1s;
-    }
-    button[type="submit"]:hover { background: var(--primary-hover); }
-    button[type="submit"]:active { transform: scale(.98); }
-    button[type="submit"]:disabled {
-      background: #93c5fd;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      display: none;
-    }
-    button[type="submit"].loading .spinner { display: block; }
-    button[type="submit"].loading .btn-text { opacity: .8; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Result area ── */
-    #result-section { display: none; }
-
-    .result-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .result-header h2 { font-size: 1.05rem; font-weight: 700; }
-
-    .badge {
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 99px;
-    }
-    .badge-success { background: #d1fae5; color: var(--success); }
-    .badge-error   { background: #fee2e2; color: var(--error); }
-
-    /* ── JSON tree renderer ── */
-    .json-tree {
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 20px 22px;
-      overflow: auto;
-      font-family: "SF Mono", "Fira Code", Menlo, monospace;
-      font-size: 0.83rem;
-      line-height: 1.8;
-    }
-    .jk { color: #7c3aed; font-weight: 600; }   /* key */
-    .js { color: #059669; }                       /* string */
-    .jn { color: #d97706; }                       /* number */
-    .jb { color: #2563eb; }                       /* boolean */
-    .jnull { color: #9ca3af; font-style: italic; }
-
-    /* ── Structured analysis cards ── */
-    .analysis-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    .stat-card {
-      background: var(--primary-light);
-      border: 1px solid #bfdbfe;
-      border-radius: 8px;
-      padding: 14px 16px;
-    }
-    .stat-card .stat-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #3b82f6;
-      margin-bottom: 4px;
-    }
-    .stat-card .stat-value {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .score-bar-wrap { margin-bottom: 20px; }
-    .score-bar-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .score-bar {
-      height: 10px;
-      background: #e5e7eb;
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .score-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      background: linear-gradient(90deg, #2563eb, #7c3aed);
-      transition: width .6s ease;
-    }
-
-    .section-title {
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      margin: 20px 0 10px;
-    }
-    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
-    .tag {
-      background: #f3f4f6;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 0.82rem;
-      color: var(--text);
-    }
-    .tag.match { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
-    .tag.gap   { background: #fee2e2; border-color: #fca5a5; color: #7f1d1d; }
-
-    .prose-block {
-      background: #f9fafb;
-      border-left: 3px solid var(--primary);
-      border-radius: 0 8px 8px 0;
-      padding: 12px 16px;
-      font-size: 0.9rem;
-      color: var(--text);
-      line-height: 1.65;
-    }
-
-    .raw-toggle {
-      margin-top: 20px;
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
-    }
-    .raw-toggle summary {
-      cursor: pointer;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--muted);
-      user-select: none;
-    }
-    .raw-toggle summary:hover { color: var(--text); }
-    .raw-toggle .json-tree { margin-top: 12px; }
-
-    .error-box {
-      background: #fff1f2;
-      border: 1px solid #fecdd3;
-      border-radius: 8px;
-      padding: 16px;
-      color: var(--error);
-      font-size: 0.9rem;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Analizi — Benay Aktaş</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Georgia',serif;background:#FAFAF8;color:#1C1917;min-height:100vh}
+.sans{font-family:'Inter',sans-serif}
+:root{--gold:#9A7B3C;--gold-light:#F0E8D5;--gold-mid:#C4A05A;--bg:#FAFAF8;--surface:#fff;--surface-alt:#F5F3EF;--border:#E8E4DC;--text:#1C1917;--text-mid:#57534E;--text-light:#A8A29E;--green:#166534;--green-bg:#F0FDF4;--green-border:#BBF7D0;--amber:#92400E;--amber-bg:#FFFBEB;--amber-border:#FDE68A;--red:#991B1B;--red-bg:#FFF1F2;--red-border:#FECDD3}
+nav{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;height:60px}
+.logo-icon{width:34px;height:34px;border-radius:9px;background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gold);font-weight:700}
+.page{max-width:580px;margin:0 auto;padding:0 20px 60px;width:100%}
+.hero{padding:48px 0 32px;border-bottom:1px solid var(--border);margin-bottom:28px}
+h1{font-size:40px;font-weight:400;line-height:1.1;letter-spacing:-1.5px;margin-bottom:16px}
+h1 em{color:var(--gold)}
+.card{background:#fff;border-radius:14px;padding:22px;border:1px solid var(--border);margin-bottom:16px}
+.field-label{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:13px 15px;font-size:14px;font-family:'Inter',sans-serif;background:var(--bg);resize:vertical;color:var(--text);line-height:1.65;outline:none}
+textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-light)}
+.cv-modes{display:flex;gap:8px;margin-bottom:12px}
+.mode-btn{padding:7px 14px;font-size:12px;font-weight:600;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Inter',sans-serif}
+.mode-btn.active{border-color:var(--gold);background:var(--gold-light);color:var(--gold)}
+.upload-zone{border:2px dashed #D4CEC3;border-radius:10px;padding:24px;text-align:center;cursor:pointer;background:var(--bg)}
+.upload-zone.has-file{border-color:var(--green);border-style:solid;background:var(--green-bg)}
+.btn-primary{background:var(--gold);color:#fff;border:none;border-radius:10px;padding:13px 20px;width:100%;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:16px}
+.btn-secondary{background:none;border:1.5px solid var(--border);border-radius:10px;padding:11px 20px;width:100%;font-size:14px;color:var(--text-mid);cursor:pointer;font-family:'Inter',sans-serif;margin-top:16px}
+.error-box{margin-top:12px;padding:12px 16px;background:var(--red-bg);border-radius:10px;font-size:12px;color:var(--red);border:1px solid var(--red-border);font-family:'Inter',sans-serif;display:none}
+.loading-wrap{display:none;align-items:center;justify-content:center;padding:24px;min-height:70vh}
+.loading-card{background:#fff;border-radius:20px;padding:52px 36px;text-align:center;max-width:360px;width:100%;border:1px solid var(--border)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin 1.6s linear infinite;font-size:32px;color:var(--gold);margin-bottom:24px}
+.progress-bar{background:var(--surface-alt);border-radius:100px;height:5px;overflow:hidden;margin-bottom:10px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#C4A05A,#9A7B3C);border-radius:100px;width:5%;transition:width .5s}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1.5px solid var(--border);margin-bottom:20px;padding-bottom:2px}
+.tab{padding:7px 13px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;border-radius:8px;color:var(--text-mid)}
+.tab.active{background:var(--gold-light);color:var(--gold);font-weight:700}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.section-label{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:14px;color:var(--gold)}
+.q-card{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);margin-bottom:10px;display:flex;gap:12px}
+.q-badge{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;color:var(--gold);background:var(--gold-light);padding:4px 10px;border-radius:20px;white-space:nowrap;align-self:flex-start}
+.q-text{font-family:'Inter',sans-serif;font-size:13px;color:var(--text-mid);line-height:1.65;margin:0}
+.ask-card{background:var(--surface-alt);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+.ask-num{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;color:var(--gold);flex-shrink:0;min-width:24px}
+.plan-badge{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--gold);background:var(--gold-light);padding:4px 12px;border-radius:20px;white-space:nowrap}
+footer{border-top:1px solid var(--border);padding:20px 24px;text-align:center;margin-top:40px}
+</style>
 </head>
 <body>
-
-<header>
-  <h1>CV Analysis Tool</h1>
-  <p>Paste a job posting and a candidate's CV to get an AI-powered HR analysis.</p>
-</header>
-
-<!-- Input card -->
-<div class="card">
-  <form id="analyze-form">
-    <div class="grid">
-      <div>
-        <label for="ilan">Job Posting</label>
-        <textarea id="ilan" name="ilan" placeholder="Paste the job posting here…" required></textarea>
-      </div>
-      <div>
-        <label for="cv">Candidate CV</label>
-        <textarea id="cv" name="cv" placeholder="Paste the candidate's CV here…" required></textarea>
-      </div>
+<nav>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo-icon">✦</div>
+    <div>
+      <div style="font-size:15px;font-weight:700">Benay Aktaş</div>
+      <div class="sans" style="font-size:11px;color:var(--text-light)">İK & Kariyer Danışmanlığı</div>
     </div>
-
-    <div class="prompt-row">
-      <label for="prompt">Custom Instruction <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — overrides both fields above)</span></label>
-      <textarea id="prompt" name="prompt" placeholder="Leave blank to use the job posting + CV above, or write a custom instruction for Claude…"></textarea>
-    </div>
-
-    <div class="actions">
-      <button type="submit" id="submit-btn">
-        <span class="spinner"></span>
-        <span class="btn-text">Analyze</span>
-      </button>
-    </div>
-  </form>
-</div>
-
-<!-- Result card -->
-<div class="card" id="result-section">
-  <div class="result-header">
-    <h2>Analysis Result</h2>
-    <span class="badge" id="status-badge"></span>
   </div>
-  <div id="result-body"></div>
+  <div class="sans" style="font-size:11px;font-weight:600;color:var(--gold);background:var(--gold-light);padding:5px 12px;border-radius:20px">CV ANALİZİ</div>
+</nav>
+
+<div id="home-section">
+  <div class="page">
+    <div class="hero">
+      <div class="sans" style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">İK'nın içinden</div>
+      <h1>CV'ni analiz et,<br><em>mülakata hazır gir.</em></h1>
+      <p class="sans" style="font-size:15px;color:var(--text-mid);line-height:1.7">İş ilanını yapıştır, CV'ni ekle. Güçlü ve zayıf yönlerin, mülakat ipuçları, STAR hikayeleri ve ilk 3 gün planın saniyeler içinde hazır.</p>
+    </div>
+    <div class="card">
+      <div class="field-label">İş İlanı <span style="color:var(--red)">*</span></div>
+      <textarea id="ilan" rows="6" placeholder="LinkedIn, Kariyer.net veya şirket kariyer sayfasından ilan metnini buraya yapıştır..."></textarea>
+      <div style="margin-top:18px">
+        <div class="field-label">CV <span style="font-weight:400;color:var(--text-light)">(isteğe bağlı)</span></div>
+        <div class="cv-modes">
+          <button class="mode-btn active" id="btn-text" onclick="setMode('text')">✏️ Metin Yapıştır</button>
+          <button class="mode-btn" id="btn-file" onclick="setMode('file')">📎 Word (.docx) Yükle</button>
+        </div>
+        <div id="mode-text">
+          <textarea id="cv-text" rows="5" placeholder="CV metnini buraya yapıştır..."></textarea>
+        </div>
+        <div id="mode-file" style="display:none">
+          <input type="file" id="cv-file" accept=".docx" style="display:none" onchange="handleFile(this)">
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('cv-file').click()">
+            <div id="upload-idle"><div style="font-size:26px;margin-bottom:8px">📎</div><div class="sans" style="font-size:13px;font-weight:600;color:var(--text-mid)">Word (.docx) yükle</div><div class="sans" style="font-size:11px;color:var(--text-light);margin-top:4px">Tıkla veya sürükle bırak</div></div>
+            <div id="upload-loading" style="display:none"><div class="sans" style="color:var(--text-mid);font-size:13px">⏳ Okunuyor...</div></div>
+            <div id="upload-done" style="display:none"><div style="font-size:22px;margin-bottom:6px">✅</div><div id="upload-filename" class="sans" style="font-size:13px;font-weight:600;color:var(--green)"></div><div id="upload-chars" class="sans" style="font-size:11px;color:var(--text-mid);margin-top:4px"></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="error-box" class="error-box"></div>
+      <button class="btn-primary" onclick="go()">✦ Analiz Et</button>
+      <p class="sans" style="text-align:center;font-size:11px;color:var(--text-light);margin-top:10px">Ücretsiz · Hesap gerekmez · Saniyeler içinde hazır</p>
+    </div>
+  </div>
 </div>
+
+<div id="loading-section" class="loading-wrap">
+  <div class="loading-card">
+    <div class="spin">✦</div>
+    <h2 style="font-size:20px;font-weight:500;margin-bottom:10px">Analiz yapılıyor</h2>
+    <p id="loading-desc" class="sans" style="font-size:13px;color:var(--text-mid);margin-bottom:28px;line-height:1.65">Şirket araştırılıyor...</p>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <p id="progress-text" class="sans" style="font-size:12px;color:var(--text-light)">5%</p>
+  </div>
+</div>
+
+<div id="result-section" style="display:none">
+  <div class="page" style="padding-top:0">
+    <div style="padding:20px 0 16px;border-bottom:1px solid var(--border);margin-bottom:20px;display:flex;align-items:center;gap:14px">
+      <div id="co-avatar" style="width:48px;height:48px;border-radius:12px;background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--gold);flex-shrink:0">?</div>
+      <div style="flex:1;min-width:0">
+        <div id="co-name" style="font-weight:600;font-size:17px;letter-spacing:-.3px;margin-bottom:2px"></div>
+        <div id="co-sector" class="sans" style="font-size:13px;color:var(--text-mid)"></div>
+      </div>
+      <div id="fit-circle" style="width:56px;height:56px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+        <span id="fit-num" class="sans" style="font-size:16px;font-weight:700;line-height:1"></span>
+        <span class="sans" style="font-size:8px;letter-spacing:1px;font-weight:600;color:var(--gold)">FİT</span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="setTab(0,this)">🏢 Şirket</button>
+      <button class="tab" onclick="setTab(1,this)">💪 Güçlü & Zayıf</button>
+      <button class="tab" onclick="setTab(2,this)">📊 İK Analizi</button>
+      <button class="tab" onclick="setTab(3,this)">💡 İpuçları</button>
+      <button class="tab" onclick="setTab(4,this)">⭐ STAR</button>
+      <button class="tab" onclick="setTab(5,this)">🔍 Sorular</button>
+      <button class="tab" onclick="setTab(6,this)">📅 İlk 3 Gün</button>
+    </div>
+
+    <div id="tp0" class="tab-panel active">
+      <div class="card"><div class="section-label">Şirket Hakkında</div><p id="co-info" class="sans" style="font-size:14px;line-height:1.7;color:var(--text-mid);margin-bottom:16px"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="background:var(--surface-alt);border-radius:10px;padding:14px"><div class="sans" style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:1.5px;margin-bottom:6px">SEKTÖR</div><div id="co-sector2" class="sans" style="font-size:14px;font-weight:600"></div></div><div style="background:var(--surface-alt);border-radius:10px;padding:14px"><div class="sans" style="font-size:10px;font-weight:700;color:var(--text-light);letter-spacing:1.5px;margin-bottom:6px">KÜLTÜR</div><div id="co-kultur" class="sans" style="font-size:14px;font-weight:600"></div></div></div></div>
+      <div id="bayrak-card" class="card" style="display:none;background:var(--red-bg);border-color:var(--red-border);border-left:3px solid var(--red)"><div class="section-label" style="color:var(--red)">⚠️ Kırmızı Bayraklar</div><div id="bayrak-list"></div></div>
+    </div>
+
+    <div id="tp1" class="tab-panel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--green-bg);border-radius:14px;padding:18px;border:1px solid var(--green-border)"><div class="sans" style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.5px;margin-bottom:12px">✅ GÜÇLÜ YÖNLER</div><div id="guclu-list"></div></div>
+        <div style="background:var(--amber-bg);border-radius:14px;padding:18px;border:1px solid var(--amber-border)"><div class="sans" style="font-size:10px;font-weight:700;color:var(--amber);letter-spacing:1.5px;margin-bottom:12px">⚠️ ZAYIF YÖNLER</div><div id="zayif-list"></div></div>
+      </div>
+      <div class="card"><div class="section-label">Genel Değerlendirme</div><p id="genel-deg" class="sans" style="font-size:14px;line-height:1.7;color:var(--text-mid)"></p></div>
+    </div>
+
+    <div id="tp2" class="tab-panel">
+      <div class="card">
+        <div class="section-label">İşe Alınma Olasılığı</div>
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px">
+          <div id="olas-circle" style="width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--gold);background:var(--gold-light)">
+            <span id="olas-pct" class="sans" style="font-size:22px;font-weight:700;color:var(--gold);line-height:1"></span>
+            <span class="sans" style="font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600">ŞANS</span>
+          </div>
+          <p id="olas-aciklama" class="sans" style="font-size:14px;line-height:1.7;color:var(--text-mid)"></p>
+        </div>
+        <div id="olas-faktorler"></div>
+      </div>
+      <div class="card"><div class="section-label">İK Uzmanı Notları</div><div style="background:var(--gold-light);border-radius:10px;padding:16px;border-left:3px solid var(--gold)"><div class="sans" style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;letter-spacing:1px">BENAY AKTAŞ — İK UZMANI</div><div id="ik-notlar-list"></div></div></div>
+      <div class="card"><div class="section-label">CV'de Değiştirilmesi Gereken Cümleler</div><div id="cv-duzelt-list"></div></div>
+    </div>
+
+    <div id="tp3" class="tab-panel">
+      <div class="card"><div class="section-label">Mülakat İpuçları</div><div id="ipucu-list"></div></div>
+      <div class="card"><div class="section-label">Gelebilecek Örnek Sorular</div><div id="ornek-sorular"></div></div>
+    </div>
+
+    <div id="tp4" class="tab-panel">
+      <div class="card"><div class="section-label">Örnek STAR Hikayeleri</div><div id="star-list"></div></div>
+    </div>
+
+    <div id="tp5" class="tab-panel">
+      <div class="card"><div class="section-label">İşverene Sorabileceğin Sorular</div><div id="ask-list"></div></div>
+    </div>
+
+    <div id="tp6" class="tab-panel">
+      <div class="card"><div class="section-label">İlk 3 Gün Hazırlık Planı</div><div id="plan-list"></div></div>
+    </div>
+
+    <button class="btn-secondary" onclick="resetApp()">← Yeni analiz yap</button>
+  </div>
+</div>
+
+<footer>
+  <div class="sans" style="font-size:12px;color:var(--text-light)">
+    <span style="color:var(--gold);font-weight:600">@hr_benayaktas</span>
+    <span style="margin:0 10px;opacity:.3">·</span>HR & Kariyer Danışmanlığı
+  </div>
+</footer>
 
 <script>
-  const form      = document.getElementById('analyze-form');
-  const submitBtn = document.getElementById('submit-btn');
-  const resultSec = document.getElementById('result-section');
-  const resultBody= document.getElementById('result-body');
-  const statusBadge = document.getElementById('status-badge');
+var BACKEND = "https://feaee4d7-89cd-480e-9552-048f78f50cc4-00-2gewfxd925j1.pike.replit.dev";
+var cvFileText = "";
+var currentMode = "text";
+var pctIv;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const ilan   = document.getElementById('ilan').value.trim();
-    const cv     = document.getElementById('cv').value.trim();
-    const prompt = document.getElementById('prompt').value.trim();
+function setMode(m) {
+  currentMode = m;
+  document.getElementById("btn-text").classList.toggle("active", m==="text");
+  document.getElementById("btn-file").classList.toggle("active", m==="file");
+  document.getElementById("mode-text").style.display = m==="text"?"block":"none";
+  document.getElementById("mode-file").style.display = m==="file"?"block":"none";
+  if (m==="text") { cvFileText=""; resetUpload(); }
+  if (m==="file") document.getElementById("cv-text").value="";
+}
 
-    setLoading(true);
+function resetUpload() {
+  var uz=document.getElementById("upload-zone");
+  if(!uz) return;
+  uz.classList.remove("has-file");
+  document.getElementById("upload-idle").style.display="block";
+  document.getElementById("upload-loading").style.display="none";
+  document.getElementById("upload-done").style.display="none";
+}
 
-    try {
-      const body = prompt ? { prompt } : { ilan, cv };
-      const res  = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+function handleFile(input) {
+  var file=input.files[0];
+  if(!file) return;
+  document.getElementById("upload-idle").style.display="none";
+  document.getElementById("upload-loading").style.display="block";
+  document.getElementById("upload-done").style.display="none";
+  showErr("");
+  var fd=new FormData();
+  fd.append("file",file);
+  fetch(BACKEND+"/api/extract-cv",{method:"POST",body:fd})
+  .then(function(r){if(!r.ok) throw new Error("Sunucu hatası: "+r.status); return r.json();})
+  .then(function(d){
+    if(!d.text||d.text.length<20) throw new Error("Metin çıkarılamadı.");
+    cvFileText=d.text;
+    document.getElementById("upload-zone").classList.add("has-file");
+    document.getElementById("upload-loading").style.display="none";
+    document.getElementById("upload-done").style.display="block";
+    document.getElementById("upload-filename").textContent=file.name;
+    document.getElementById("upload-chars").textContent=cvFileText.length+" karakter okundu";
+  }).catch(function(e){resetUpload();showErr("CV hatası: "+e.message);});
+  input.value="";
+}
 
-      const raw = await res.json();
-      setLoading(false);
-      showResult(res.ok, raw);
-    } catch (err) {
-      setLoading(false);
-      showError(err.message || 'Network error');
-    }
+function showErr(msg){var el=document.getElementById("error-box");el.textContent=msg?"⚠️ "+msg:"";el.style.display=msg?"block":"none";}
+function updatePct(p){document.getElementById("progress-fill").style.width=p+"%";document.getElementById("progress-text").textContent=Math.round(p)+"%";}
+
+function go() {
+  var ilan=document.getElementById("ilan").value.trim();
+  if(ilan.length<30){showErr("İş ilanı metnini girin.");return;}
+  var cv=currentMode==="file"?cvFileText:document.getElementById("cv-text").value.trim();
+  showErr("");
+  document.getElementById("home-section").style.display="none";
+  document.getElementById("loading-section").style.display="flex";
+  var hasCv=!!(cv&&cv.length>20);
+  document.getElementById("loading-desc").textContent=hasCv?"İlan ve CV analiz ediliyor":"Şirket araştırılıyor...";
+  var pct=5; updatePct(pct);
+  pctIv=setInterval(function(){pct=Math.min(85,pct+6);updatePct(pct);},600);
+  var prompt=buildPrompt(ilan,cv);
+  fetch(BACKEND+"/api/analyze",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({ilan:ilan,cv:cv,prompt:prompt})})
+  .then(function(r){if(!r.ok) throw new Error("HTTP "+r.status); return r.json();})
+  .then(function(data){
+    clearInterval(pctIv);updatePct(100);
+    if(data.error) throw new Error(data.error.message||data.error);
+    var block=(data.result.content||[]).find(function(b){return b.type==="text";});
+    var raw=block?block.text:"";
+    var s=raw.indexOf("{"),e=raw.lastIndexOf("}");
+    if(s===-1) throw new Error("Yanit alinmadi.");
+    var clean=raw.slice(s,e+1).replace(/,(\s*[}\]])/g,"$1").replace(/[\n\r\t]/g," ");
+    setTimeout(function(){renderResult(JSON.parse(clean));},400);
+  }).catch(function(e){
+    clearInterval(pctIv);
+    document.getElementById("home-section").style.display="block";
+    document.getElementById("loading-section").style.display="none";
+    showErr(e.message);
   });
+}
 
-  function setLoading(on) {
-    submitBtn.disabled = on;
-    submitBtn.classList.toggle('loading', on);
-    document.querySelector('.btn-text').textContent = on ? 'Analyzing…' : 'Analyze';
-  }
+function buildPrompt(ilan,cv){
+  var hasCv=!!(cv&&cv.length>20);
+  var score=hasCv?82:70;
+  var p="Sen deneyimli bir IK uzmanisın. Verilen is ilanını"+(hasCv?" ve CV'yi":"")+" analiz et. SADECE JSON dondur. Turkce kullan. Tum stringler tek satirda.\n\nIS ILANI:\n"+ilan.slice(0,2000)+(hasCv?"\n\nCV:\n"+cv.slice(0,1500):"");
+  p+="\n\nJSON:\n{\"sirket\":{\"ad\":\"ad\",\"sektor\":\"sektor\",\"kultur\":\"kultur\",\"genel_bilgi\":\"3-4 cumle detay\"},\"uyum_skoru\":"+score+",\"kirmizi_bayraklar\":[\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"],\"guclu_yonler\":"+(hasCv?"[\"g1\",\"g2\",\"g3\",\"g4\",\"g5\"]":"[]")+",\"zayif_yonler\":"+(hasCv?"[\"z1\",\"z2\",\"z3\",\"z4\",\"z5\"]":"[]")+",\"genel_degerlendirme\":\""+(hasCv?"2-3 cumle":"")+"\",\"ise_alinma_olasiligi\":{\"yuzde\":"+(hasCv?72:60)+",\"aciklama\":\"aciklama\",\"olumlu_faktorler\":[\"f1\",\"f2\"],\"olumsuz_faktorler\":[\"f1\",\"f2\"]},\"ik_notlari\":[\"not1\",\"not2\",\"not3\"],\"cv_duzeltmeleri\":"+(hasCv?"[{\"mevcut\":\"eski\",\"onerilern\":\"yeni\"},{\"mevcut\":\"eski2\",\"onerilern\":\"yeni2\"}]":"[]")+",\"mulakat_ipuclari\":[\"ip1\",\"ip2\",\"ip3\",\"ip4\"],\"ornek_sorular\":[{\"kategori\":\"Deneyim\",\"soru\":\"s\"},{\"kategori\":\"Teknik\",\"soru\":\"s\"},{\"kategori\":\"Davranissal\",\"soru\":\"s\"},{\"kategori\":\"Motivasyon\",\"soru\":\"s\"},{\"kategori\":\"Liderlik\",\"soru\":\"s\"}],\"star_hikayeleri\":[{\"baslik\":\"b\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"},{\"baslik\":\"b2\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"}],\"ise_soracaklar\":[\"s1\",\"s2\",\"s3\",\"s4\",\"s5\"],\"ilk_3_gun\":[{\"gun\":\"1. Gun\",\"baslik\":\"b\",\"gorevler\":[\"g1\",\"g2\",\"g3\"]},{\"gun\":\"2. Gun\",\"baslik\":\"b\",\"gorevler\":[\"g1\",\"g2\",\"g3\"]},{\"gun\":\"3. Gun\",\"baslik\":\"b\",\"gorevler\":[\"g1\",\"g2\",\"g3\"]}]}";
+  return p;
+}
 
-  function showResult(ok, raw) {
-    resultSec.style.display = 'block';
-    resultSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function sc(v){return v>=80?"var(--green)":v>=60?"var(--gold)":"var(--red)";}
+function sb(v){return v>=80?"var(--green-bg)":v>=60?"var(--gold-light)":"var(--red-bg)";}
 
-    if (!ok) {
-      statusBadge.className = 'badge badge-error';
-      statusBadge.textContent = 'Error';
-      resultBody.innerHTML = `<div class="error-box">${escHtml(raw.error || JSON.stringify(raw))}</div>`;
-      return;
-    }
+function renderResult(d){
+  document.getElementById("loading-section").style.display="none";
+  document.getElementById("result-section").style.display="block";
+  var s=d.sirket||{};var score=d.uyum_skoru||75;
+  document.getElementById("co-avatar").textContent=(s.ad||"?")[0].toUpperCase();
+  document.getElementById("co-name").textContent=s.ad||"";
+  document.getElementById("co-sector").textContent=s.sektor||"";
+  document.getElementById("co-sector2").textContent=s.sektor||"";
+  document.getElementById("co-kultur").textContent=s.kultur||"";
+  document.getElementById("co-info").textContent=s.genel_bilgi||"";
+  var fc=document.getElementById("fit-circle");
+  fc.style.background=sb(score);fc.style.border="2px solid "+sc(score);
+  document.getElementById("fit-num").textContent=score;
+  document.getElementById("fit-num").style.color=sc(score);
+  var bayraklar=(d.kirmizi_bayraklar||[]).filter(Boolean);
+  if(bayraklar.length){document.getElementById("bayrak-card").style.display="block";document.getElementById("bayrak-list").innerHTML=bayraklar.map(function(k){return "<div class='sans' style='font-size:13px;margin-bottom:8px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--red);flex-shrink:0'>—</span>"+k+"</div>";}).join("");}
+  document.getElementById("guclu-list").innerHTML=(d.guclu_yonler||[]).map(function(g,i){return "<div class='sans' style='font-size:12px;margin-bottom:8px;display:flex;gap:7px;line-height:1.5'><span style='color:var(--green);font-weight:700;flex-shrink:0'>"+(i+1)+".</span>"+g+"</div>";}).join("");
+  document.getElementById("zayif-list").innerHTML=(d.zayif_yonler||[]).map(function(z,i){return "<div class='sans' style='font-size:12px;margin-bottom:8px;display:flex;gap:7px;line-height:1.5'><span style='color:var(--amber);font-weight:700;flex-shrink:0'>"+(i+1)+".</span>"+z+"</div>";}).join("");
+  document.getElementById("genel-deg").textContent=d.genel_degerlendirme||"";
+  var olas=d.ise_alinma_olasiligi||{};var opct=olas.yuzde||0;
+  var ocolor=opct>=70?"var(--green)":opct>=50?"var(--gold)":"var(--red)";
+  var oc=document.getElementById("olas-circle");oc.style.border="3px solid "+ocolor;oc.style.background=opct>=70?"var(--green-bg)":opct>=50?"var(--gold-light)":"var(--red-bg)";
+  document.getElementById("olas-pct").textContent="%"+opct;document.getElementById("olas-pct").style.color=ocolor;
+  document.getElementById("olas-aciklama").textContent=olas.aciklama||"";
+  var ofHTML="";
+  if((olas.olumlu_faktorler||[]).length){ofHTML+="<div class='sans' style='font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:1px'>OLUMLU FAKTÖRLER</div>"+(olas.olumlu_faktorler||[]).map(function(f){return "<div class='sans' style='font-size:13px;margin-bottom:5px;display:flex;gap:7px'><span style='color:var(--green)'>+</span>"+f+"</div>";}).join("");}
+  if((olas.olumsuz_faktorler||[]).length){ofHTML+="<div class='sans' style='font-size:11px;font-weight:700;color:var(--red);margin-top:12px;margin-bottom:6px;letter-spacing:1px'>OLUMSUZ FAKTÖRLER</div>"+(olas.olumsuz_faktorler||[]).map(function(f){return "<div class='sans' style='font-size:13px;margin-bottom:5px;display:flex;gap:7px'><span style='color:var(--red)'>−</span>"+f+"</div>";}).join("");}
+  document.getElementById("olas-faktorler").innerHTML=ofHTML;
+  document.getElementById("ik-notlar-list").innerHTML=(d.ik_notlari||[]).map(function(n){return "<div class='sans' style='font-size:14px;line-height:1.7;margin-bottom:10px;display:flex;gap:8px'><span style='color:var(--gold);flex-shrink:0'>•</span>"+n+"</div>";}).join("");
+  document.getElementById("cv-duzelt-list").innerHTML=(d.cv_duzeltmeleri||[]).map(function(item,i){return "<div style='margin-bottom:16px;padding-bottom:16px;border-bottom:"+(i<(d.cv_duzeltmeleri.length-1)?"1px solid var(--border)":"none")+"'><div class='sans' style='font-size:10px;font-weight:700;color:var(--red);letter-spacing:1px;margin-bottom:6px'>MEVCUT</div><div class='sans' style='font-size:13px;color:var(--text-mid);background:var(--red-bg);padding:8px 12px;border-radius:8px;margin-bottom:8px;line-height:1.5'>"+item.mevcut+"</div><div class='sans' style='font-size:10px;font-weight:700;color:var(--green);letter-spacing:1px;margin-bottom:6px'>ÖNERİLEN</div><div class='sans' style='font-size:13px;color:var(--text);background:var(--green-bg);padding:8px 12px;border-radius:8px;line-height:1.5'>"+item.onerilern+"</div></div>";}).join("");
+  document.getElementById("ipucu-list").innerHTML=(d.mulakat_ipuclari||[]).map(function(ip){return "<div class='sans' style='font-size:14px;margin-bottom:14px;display:flex;gap:10px;line-height:1.6'><span style='color:var(--gold);font-weight:700;flex-shrink:0'>✦</span>"+ip+"</div>";}).join("");
+  document.getElementById("ornek-sorular").innerHTML=(d.ornek_sorular||[]).map(function(q){return "<div class='q-card'><div class='q-badge'>"+q.kategori+"</div><p class='q-text'>"+q.soru+"</p></div>";}).join("");
+  var starColors=["var(--gold)","#2D6A4F","#1D4E89","#6B21A8"];
+  var starKeys=[["S — Durum","durum"],["T — Görev","gorev"],["A — Eylem","eylem"],["R — Sonuç","sonuc"]];
+  document.getElementById("star-list").innerHTML=(d.star_hikayeleri||[]).map(function(h,hi){var inner="<div class='sans' style='font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px'>📌 "+(h.baslik||"")+"</div>"+starKeys.map(function(item,i){return "<div style='margin-bottom:12px'><div class='sans' style='font-size:11px;font-weight:700;color:"+starColors[i]+";margin-bottom:5px'>"+item[0]+"</div><p class='sans' style='font-size:13px;color:var(--text-mid);line-height:1.6;margin:0'>"+(h[item[1]]||"")+"</p></div>";}).join("");var border=hi<(d.star_hikayeleri.length-1)?"margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border)":"";return "<div style='"+border+"'>"+inner+"</div>";}).join("");
+  document.getElementById("ask-list").innerHTML=(d.ise_soracaklar||[]).map(function(q,i){return "<div class='ask-card'><div class='ask-num'>"+String(i+1).padStart(2,"0")+"</div><p class='q-text'>"+q+"</p></div>";}).join("");
+  document.getElementById("plan-list").innerHTML=(d.ilk_3_gun||[]).map(function(g,gi){var border=gi<(d.ilk_3_gun.length-1)?"margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)":"";var tasks=(g.gorevler||[]).map(function(t){return "<div class='sans' style='font-size:13px;color:var(--text-mid);margin-bottom:7px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--gold);flex-shrink:0'>→</span>"+t+"</div>";}).join("");return "<div style='"+border+"'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div class='plan-badge'>"+g.gun+"</div><div class='sans' style='font-size:14px;font-weight:600'>"+(g.baslik||"")+"</div></div>"+tasks+"</div>";}).join("");
+}
 
-    statusBadge.className = 'badge badge-success';
-    statusBadge.textContent = 'Success';
+function setTab(i,btn){for(var j=0;j<7;j++){var tp=document.getElementById("tp"+j);if(tp)tp.style.display=j===i?"block":"none";}document.querySelectorAll(".tab").forEach(function(b){b.classList.remove("active");});btn.classList.add("active");}
 
-    // Extract text content from Claude response
-    let parsed = null;
-    let claudeText = null;
-    try {
-      const content = raw.result?.content;
-      if (Array.isArray(content)) {
-        claudeText = content.map(b => b.text || '').join('');
-      } else if (typeof content === 'string') {
-        claudeText = content;
-      }
-      if (claudeText) parsed = JSON.parse(claudeText);
-    } catch (_) { /* not JSON — render raw */ }
-
-    resultBody.innerHTML = '';
-
-    if (parsed) {
-      resultBody.appendChild(renderStructured(parsed));
-      const details = document.createElement('details');
-      details.className = 'raw-toggle';
-      details.innerHTML = `<summary>Show raw JSON response</summary>`;
-      const tree = document.createElement('div');
-      tree.className = 'json-tree';
-      tree.innerHTML = jsonToHtml(raw);
-      details.appendChild(tree);
-      resultBody.appendChild(details);
-    } else if (claudeText) {
-      const p = document.createElement('div');
-      p.className = 'prose-block';
-      p.textContent = claudeText;
-      resultBody.appendChild(p);
-    } else {
-      const tree = document.createElement('div');
-      tree.className = 'json-tree';
-      tree.innerHTML = jsonToHtml(raw);
-      resultBody.appendChild(tree);
-    }
-  }
-
-  function showError(msg) {
-    resultSec.style.display = 'block';
-    statusBadge.className = 'badge badge-error';
-    statusBadge.textContent = 'Error';
-    resultBody.innerHTML = `<div class="error-box">${escHtml(msg)}</div>`;
-  }
-
-  /* ── Structured renderer for common HR JSON shapes ── */
-  function renderStructured(obj) {
-    const wrap = document.createElement('div');
-
-    // Score / uyumluluk
-    const scoreKey = findKey(obj, ['score','skor','uyumluluk','uyum_skoru','match_score','compatibility']);
-    if (scoreKey !== null) {
-      const val = parseFloat(obj[scoreKey]);
-      if (!isNaN(val)) {
-        const pct = val <= 1 ? val * 100 : val;
-        wrap.innerHTML += `
-          <div class="score-bar-wrap">
-            <div class="score-bar-label">
-              <span>${labelFor(scoreKey)}</span>
-              <span>${Math.round(pct)}%</span>
-            </div>
-            <div class="score-bar"><div class="score-bar-fill" style="width:${Math.min(pct,100)}%"></div></div>
-          </div>`;
-      }
-    }
-
-    // Stat cards for simple key:value pairs
-    const statKeys = Object.keys(obj).filter(k => {
-      const v = obj[k];
-      return (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') && k !== scoreKey;
-    });
-    if (statKeys.length) {
-      const grid = document.createElement('div');
-      grid.className = 'analysis-grid';
-      statKeys.forEach(k => {
-        grid.innerHTML += `<div class="stat-card"><div class="stat-label">${labelFor(k)}</div><div class="stat-value">${escHtml(String(obj[k]))}</div></div>`;
-      });
-      wrap.appendChild(grid);
-    }
-
-    // Array fields — skills, matches, gaps, etc.
-    Object.keys(obj).forEach(k => {
-      const v = obj[k];
-      if (!Array.isArray(v)) return;
-
-      wrap.innerHTML += `<div class="section-title">${labelFor(k)}</div>`;
-      const isGap   = /gap|eksik|missing|yetersiz/i.test(k);
-      const isMatch = /match|uyuml|güçlü|strong/i.test(k);
-      const tagList = document.createElement('div');
-      tagList.className = 'tag-list';
-      v.forEach(item => {
-        const cls = isGap ? 'tag gap' : isMatch ? 'tag match' : 'tag';
-        tagList.innerHTML += `<span class="${cls}">${escHtml(String(item))}</span>`;
-      });
-      wrap.appendChild(tagList);
-    });
-
-    // Nested object fields (e.g. degerlendirme: {...})
-    Object.keys(obj).forEach(k => {
-      const v = obj[k];
-      if (typeof v !== 'object' || v === null || Array.isArray(v)) return;
-      wrap.innerHTML += `<div class="section-title">${labelFor(k)}</div>`;
-      const sub = document.createElement('div');
-      sub.className = 'analysis-grid';
-      Object.keys(v).forEach(sk => {
-        sub.innerHTML += `<div class="stat-card"><div class="stat-label">${labelFor(sk)}</div><div class="stat-value">${escHtml(String(v[sk]))}</div></div>`;
-      });
-      wrap.appendChild(sub);
-    });
-
-    return wrap;
-  }
-
-  /* ── Syntax-highlighted JSON ── */
-  function jsonToHtml(val, indent = 0) {
-    const pad  = '  '.repeat(indent);
-    const pad1 = '  '.repeat(indent + 1);
-    if (val === null) return `<span class="jnull">null</span>`;
-    if (typeof val === 'boolean') return `<span class="jb">${val}</span>`;
-    if (typeof val === 'number')  return `<span class="jn">${val}</span>`;
-    if (typeof val === 'string')  return `<span class="js">"${escHtml(val)}"</span>`;
-    if (Array.isArray(val)) {
-      if (!val.length) return '[]';
-      const items = val.map(v => `${pad1}${jsonToHtml(v, indent + 1)}`).join(',\n');
-      return `[\n${items}\n${pad}]`;
-    }
-    if (typeof val === 'object') {
-      const keys = Object.keys(val);
-      if (!keys.length) return '{}';
-      const items = keys.map(k =>
-        `${pad1}<span class="jk">"${escHtml(k)}"</span>: ${jsonToHtml(val[k], indent + 1)}`
-      ).join(',\n');
-      return `{\n${items}\n${pad}}`;
-    }
-    return escHtml(String(val));
-  }
-
-  function findKey(obj, candidates) {
-    for (const c of candidates) {
-      const found = Object.keys(obj).find(k => k.toLowerCase() === c.toLowerCase());
-      if (found !== undefined) return found;
-    }
-    return null;
-  }
-
-  function labelFor(key) {
-    return key.replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2')
-      .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  }
-
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+function resetApp(){document.getElementById("result-section").style.display="none";document.getElementById("home-section").style.display="block";document.getElementById("ilan").value="";document.getElementById("cv-text").value="";cvFileText="";setMode("text");showErr("");document.getElementById("bayrak-card").style.display="none";window.scrollTo(0,0);}
 </script>
 </body>
 </html>
