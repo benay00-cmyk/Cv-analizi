@@ -1,0 +1,138 @@
+<script>
+var BACKEND = "https://feaee4d7-89cd-480e-9552-048f78f50cc4-00-2gewfxd925j1.pike.replit.dev";
+var cvFileText = "";
+var currentMode = "text";
+var pctIv;
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById("btn-text").classList.toggle("active", m==="text");
+  document.getElementById("btn-file").classList.toggle("active", m==="file");
+  document.getElementById("mode-text").style.display = m==="text"?"block":"none";
+  document.getElementById("mode-file").style.display = m==="file"?"block":"none";
+  if (m==="text") { cvFileText=""; resetUpload(); }
+  if (m==="file") document.getElementById("cv-text").value="";
+}
+
+function resetUpload() {
+  var uz=document.getElementById("upload-zone");
+  if(!uz) return;
+  uz.classList.remove("has-file");
+  document.getElementById("upload-idle").style.display="block";
+  document.getElementById("upload-loading").style.display="none";
+  document.getElementById("upload-done").style.display="none";
+}
+
+function handleFile(input) {
+  var file=input.files[0];
+  if(!file) return;
+  document.getElementById("upload-idle").style.display="none";
+  document.getElementById("upload-loading").style.display="block";
+  document.getElementById("upload-done").style.display="none";
+  showErr("");
+  var fd=new FormData();
+  fd.append("file",file);
+  fetch(BACKEND+"/api/extract-cv",{method:"POST",body:fd})
+  .then(function(r){if(!r.ok) throw new Error("Sunucu hatası: "+r.status); return r.json();})
+  .then(function(d){
+    if(!d.text||d.text.length<20) throw new Error("Metin çıkarılamadı.");
+    cvFileText=d.text;
+    document.getElementById("upload-zone").classList.add("has-file");
+    document.getElementById("upload-loading").style.display="none";
+    document.getElementById("upload-done").style.display="block";
+    document.getElementById("upload-filename").textContent=file.name;
+    document.getElementById("upload-chars").textContent=cvFileText.length+" karakter okundu";
+  }).catch(function(e){resetUpload();showErr("CV hatası: "+e.message);});
+  input.value="";
+}
+
+function showErr(msg){var el=document.getElementById("error-box");el.textContent=msg?"⚠️ "+msg:"";el.style.display=msg?"block":"none";}
+function updatePct(p){document.getElementById("progress-fill").style.width=p+"%";document.getElementById("progress-text").textContent=Math.round(p)+"%";}
+
+function go() {
+  var ilan=document.getElementById("ilan").value.trim();
+  if(ilan.length<30){showErr("İş ilanı metnini girin.");return;}
+  var cv=currentMode==="file"?cvFileText:document.getElementById("cv-text").value.trim();
+  showErr("");
+  document.getElementById("home-section").style.display="none";
+  document.getElementById("loading-section").style.display="flex";
+  var hasCv=!!(cv&&cv.length>20);
+  document.getElementById("loading-desc").textContent=hasCv?"İlan ve CV analiz ediliyor":"Şirket araştırılıyor...";
+  var pct=5; updatePct(pct);
+  pctIv=setInterval(function(){pct=Math.min(85,pct+6);updatePct(pct);},600);
+  var prompt=buildPrompt(ilan,cv);
+  fetch(BACKEND+"/api/analyze",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({ilan:ilan,cv:cv,prompt:prompt})})
+  .then(function(r){if(!r.ok) throw new Error("HTTP "+r.status); return r.json();})
+  .then(function(data){
+    clearInterval(pctIv);updatePct(100);
+    if(data.error) throw new Error(data.error.message||data.error);
+    var block=(data.content||[]).find(function(b){return b.type==="text";});
+    var raw=block?block.text:"";
+    var s=raw.indexOf("{"),e=raw.lastIndexOf("}");
+    if(s===-1) throw new Error("Yanit alinmadi.");
+    var clean=raw.slice(s,e+1).replace(/,(\s*[}\]])/g,"$1").replace(/[\n\r\t]/g," ");
+    setTimeout(function(){renderResult(JSON.parse(clean));},400);
+  }).catch(function(e){
+    clearInterval(pctIv);
+    document.getElementById("home-section").style.display="block";
+    document.getElementById("loading-section").style.display="none";
+    showErr(e.message);
+  });
+}
+
+function buildPrompt(ilan,cv){
+  var hasCv=!!(cv&&cv.length>20);
+  var score=hasCv?82:70;
+  var p="Sen deneyimli bir IK uzmanisın. Verilen is ilanını"+(hasCv?" ve CV'yi":"")+" analiz et. SADECE JSON dondur. Turkce kullan. Tum stringler tek satirda.\n\nIS ILANI:\n"+ilan.slice(0,2000)+(hasCv?"\n\nCV:\n"+cv.slice(0,1500):"");
+  p+="\n\nJSON:\n{\"sirket\":{\"ad\":\"ad\",\"sektor\":\"sektor\",\"kultur\":\"kultur\",\"genel_bilgi\":\"3-4 cumle detay\"},\"uyum_skoru\":"+score+",\"kirmizi_bayraklar\":[\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"],\"guclu_yonler\":"+(hasCv?"[\"g1\",\"g2\",\"g3\",\"g4\",\"g5\"]":"[]")+",\"zayif_yonler\":"+(hasCv?"[\"z1\",\"z2\",\"z3\",\"z4\",\"z5\"]":"[]")+",\"genel_degerlendirme\":\""+(hasCv?"2-3 cumle":"")+"\",\"ise_alinma_olasiligi\":{\"yuzde\":"+(hasCv?72:60)+",\"aciklama\":\"aciklama\",\"olumlu_faktorler\":[\"f1\",\"f2\"],\"olumsuz_faktorler\":[\"f1\",\"f2\"]},\"ik_notlari\":[\"not1\",\"not2\",\"not3\"],\"cv_duzeltmeleri\":"+(hasCv?"[{\"mevcut\":\"eski\",\"onerilern\":\"yeni\"},{\"mevcut\":\"eski2\",\"onerilern\":\"yeni2\"}]":"[]")+",\"mulakat_ipuclari\":[\"ip1\",\"ip2\",\"ip3\",\"ip4\"],\"ornek_sorular\":[{\"kategori\":\"Deneyim\",\"soru\":\"s\"},{\"kategori\":\"Teknik\",\"soru\":\"s\"},{\"kategori\":\"Davranissal\",\"soru\":\"s\"},{\"kategori\":\"Motivasyon\",\"soru\":\"s\"},{\"kategori\":\"Liderlik\",\"soru\":\"s\"}],\"star_hikayeleri\":[{\"baslik\":\"b\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"},{\"baslik\":\"b2\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"}],\"ise_soracaklar\":[\"s1\",\"s2\",\"s3\",\"s4\",\"s5\"],\"ilk_3_gun\":[{\"gun\":\"1. Gun\",\"baslik\":\"b\",\"gorevler\":[\"g1\",\"g2\",\"g3\"]},{\"gun\":\"2. Gun\",\"baslik\":\"b\",\"gorevler\":[\"g1\",\"g2\",\"g3\"]},{\"gun\":\"3. Gun\",\"baslik\":\"b\",\"gorevler\":[\"g1\",\"g2\",\"g3\"]}]}";
+  return p;
+}
+
+function sc(v){return v>=80?"var(--green)":v>=60?"var(--gold)":"var(--red)";}
+function sb(v){return v>=80?"var(--green-bg)":v>=60?"var(--gold-light)":"var(--red-bg)";}
+
+function renderResult(d){
+  document.getElementById("loading-section").style.display="none";
+  document.getElementById("result-section").style.display="block";
+  var s=d.sirket||{};var score=d.uyum_skoru||75;
+  document.getElementById("co-avatar").textContent=(s.ad||"?")[0].toUpperCase();
+  document.getElementById("co-name").textContent=s.ad||"";
+  document.getElementById("co-sector").textContent=s.sektor||"";
+  document.getElementById("co-sector2").textContent=s.sektor||"";
+  document.getElementById("co-kultur").textContent=s.kultur||"";
+  document.getElementById("co-info").textContent=s.genel_bilgi||"";
+  var fc=document.getElementById("fit-circle");
+  fc.style.background=sb(score);fc.style.border="2px solid "+sc(score);
+  document.getElementById("fit-num").textContent=score;
+  document.getElementById("fit-num").style.color=sc(score);
+  var bayraklar=(d.kirmizi_bayraklar||[]).filter(Boolean);
+  if(bayraklar.length){document.getElementById("bayrak-card").style.display="block";document.getElementById("bayrak-list").innerHTML=bayraklar.map(function(k){return "<div class='sans' style='font-size:13px;margin-bottom:8px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--red);flex-shrink:0'>—</span>"+k+"</div>";}).join("");}
+  document.getElementById("guclu-list").innerHTML=(d.guclu_yonler||[]).map(function(g,i){return "<div class='sans' style='font-size:12px;margin-bottom:8px;display:flex;gap:7px;line-height:1.5'><span style='color:var(--green);font-weight:700;flex-shrink:0'>"+(i+1)+".</span>"+g+"</div>";}).join("");
+  document.getElementById("zayif-list").innerHTML=(d.zayif_yonler||[]).map(function(z,i){return "<div class='sans' style='font-size:12px;margin-bottom:8px;display:flex;gap:7px;line-height:1.5'><span style='color:var(--amber);font-weight:700;flex-shrink:0'>"+(i+1)+".</span>"+z+"</div>";}).join("");
+  document.getElementById("genel-deg").textContent=d.genel_degerlendirme||"";
+  var olas=d.ise_alinma_olasiligi||{};var opct=olas.yuzde||0;
+  var ocolor=opct>=70?"var(--green)":opct>=50?"var(--gold)":"var(--red)";
+  var oc=document.getElementById("olas-circle");oc.style.border="3px solid "+ocolor;oc.style.background=opct>=70?"var(--green-bg)":opct>=50?"var(--gold-light)":"var(--red-bg)";
+  document.getElementById("olas-pct").textContent="%"+opct;document.getElementById("olas-pct").style.color=ocolor;
+  document.getElementById("olas-aciklama").textContent=olas.aciklama||"";
+  var ofHTML="";
+  if((olas.olumlu_faktorler||[]).length){ofHTML+="<div class='sans' style='font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:1px'>OLUMLU FAKTÖRLER</div>"+(olas.olumlu_faktorler||[]).map(function(f){return "<div class='sans' style='font-size:13px;margin-bottom:5px;display:flex;gap:7px'><span style='color:var(--green)'>+</span>"+f+"</div>";}).join("");}
+  if((olas.olumsuz_faktorler||[]).length){ofHTML+="<div class='sans' style='font-size:11px;font-weight:700;color:var(--red);margin-top:12px;margin-bottom:6px;letter-spacing:1px'>OLUMSUZ FAKTÖRLER</div>"+(olas.olumsuz_faktorler||[]).map(function(f){return "<div class='sans' style='font-size:13px;margin-bottom:5px;display:flex;gap:7px'><span style='color:var(--red)'>−</span>"+f+"</div>";}).join("");}
+  document.getElementById("olas-faktorler").innerHTML=ofHTML;
+  document.getElementById("ik-notlar-list").innerHTML=(d.ik_notlari||[]).map(function(n){return "<div class='sans' style='font-size:14px;line-height:1.7;margin-bottom:10px;display:flex;gap:8px'><span style='color:var(--gold);flex-shrink:0'>•</span>"+n+"</div>";}).join("");
+  document.getElementById("cv-duzelt-list").innerHTML=(d.cv_duzeltmeleri||[]).map(function(item,i){return "<div style='margin-bottom:16px;padding-bottom:16px;border-bottom:"+(i<(d.cv_duzeltmeleri.length-1)?"1px solid var(--border)":"none")+"'><div class='sans' style='font-size:10px;font-weight:700;color:var(--red);letter-spacing:1px;margin-bottom:6px'>MEVCUT</div><div class='sans' style='font-size:13px;color:var(--text-mid);background:var(--red-bg);padding:8px 12px;border-radius:8px;margin-bottom:8px;line-height:1.5'>"+item.mevcut+"</div><div class='sans' style='font-size:10px;font-weight:700;color:var(--green);letter-spacing:1px;margin-bottom:6px'>ÖNERİLEN</div><div class='sans' style='font-size:13px;color:var(--text);background:var(--green-bg);padding:8px 12px;border-radius:8px;line-height:1.5'>"+item.onerilern+"</div></div>";}).join("");
+  document.getElementById("ipucu-list").innerHTML=(d.mulakat_ipuclari||[]).map(function(ip){return "<div class='sans' style='font-size:14px;margin-bottom:14px;display:flex;gap:10px;line-height:1.6'><span style='color:var(--gold);font-weight:700;flex-shrink:0'>✦</span>"+ip+"</div>";}).join("");
+  document.getElementById("ornek-sorular").innerHTML=(d.ornek_sorular||[]).map(function(q){return "<div class='q-card'><div class='q-badge'>"+q.kategori+"</div><p class='q-text'>"+q.soru+"</p></div>";}).join("");
+  var starColors=["var(--gold)","#2D6A4F","#1D4E89","#6B21A8"];
+  var starKeys=[["S — Durum","durum"],["T — Görev","gorev"],["A — Eylem","eylem"],["R — Sonuç","sonuc"]];
+  document.getElementById("star-list").innerHTML=(d.star_hikayeleri||[]).map(function(h,hi){var inner="<div class='sans' style='font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px'>📌 "+(h.baslik||"")+"</div>"+starKeys.map(function(item,i){return "<div style='margin-bottom:12px'><div class='sans' style='font-size:11px;font-weight:700;color:"+starColors[i]+";margin-bottom:5px'>"+item[0]+"</div><p class='sans' style='font-size:13px;color:var(--text-mid);line-height:1.6;margin:0'>"+(h[item[1]]||"")+"</p></div>";}).join("");var border=hi<(d.star_hikayeleri.length-1)?"margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border)":"";return "<div style='"+border+"'>"+inner+"</div>";}).join("");
+  document.getElementById("ask-list").innerHTML=(d.ise_soracaklar||[]).map(function(q,i){return "<div class='ask-card'><div class='ask-num'>"+String(i+1).padStart(2,"0")+"</div><p class='q-text'>"+q+"</p></div>";}).join("");
+  document.getElementById("plan-list").innerHTML=(d.ilk_3_gun||[]).map(function(g,gi){var border=gi<(d.ilk_3_gun.length-1)?"margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)":"";var tasks=(g.gorevler||[]).map(function(t){return "<div class='sans' style='font-size:13px;color:var(--text-mid);margin-bottom:7px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--gold);flex-shrink:0'>→</span>"+t+"</div>";}).join("");return "<div style='"+border+"'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div class='plan-badge'>"+g.gun+"</div><div class='sans' style='font-size:14px;font-weight:600'>"+(g.baslik||"")+"</div></div>"+tasks+"</div>";}).join("");
+}
+
+function setTab(i,btn){for(var j=0;j<7;j++){var tp=document.getElementById("tp"+j);if(tp)tp.style.display=j===i?"block":"none";}document.querySelectorAll(".tab").forEach(function(b){b.classList.remove("active");});btn.classList.add("active");}
+
+function resetApp(){document.getElementById("result-section").style.display="none";document.getElementById("home-section").style.display="block";document.getElementById("ilan").value="";document.getElementById("cv-text").value="";cvFileText="";setMode("text");showErr("");document.getElementById("bayrak-card").style.display="none";window.scrollTo(0,0);}
+</script>
+</body>
+</html>
