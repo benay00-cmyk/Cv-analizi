@@ -9,7 +9,12 @@
   },
   "private": true,
   "dependencies": {
-    "@replit/connectors-sdk": "^0.4.1"
+    "@anthropic-ai/sdk": "^0.112.5",
+    "@replit/connectors-sdk": "^0.4.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mammoth": "^1.12.0",
+    "multer": "^2.2.0"
   },
   "devDependencies": {
     "prettier": "^3.9.5",
