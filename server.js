@@ -29,8 +29,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve index.html and static assets from the same directory as this file
-app.use(express.static(__dirname));
-app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.use(express.static(path.join(__dirname, "src")));
+app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "src", "index.html")));
 
 // ─── Multer (file uploads) ──────────────────────────────────────────────────
 
