@@ -260,7 +260,16 @@ function go() {
     var s=raw.indexOf("{"),e=raw.lastIndexOf("}");
     if(s===-1) throw new Error("Yanit alinmadi.");
     var clean=raw.slice(s,e+1).replace(/,(\s*[}\]])/g,"$1").replace(/[\n\r\t]/g," ");
-    setTimeout(function(){renderResult(JSON.parse(clean));},400);
+    setTimeout(function(){
+  try{
+    renderResult(JSON.parse(clean));
+  }catch(err){
+    clearInterval(pctIv);
+    document.getElementById("home-section").style.display="block";
+    document.getElementById("loading-section").style.display="none";
+    showErr("Analiz sonucu işlenemedi, lütfen tekrar deneyin.");
+  }
+},400);
   }).catch(function(e){
     clearInterval(pctIv);
     document.getElementById("home-section").style.display="block";
