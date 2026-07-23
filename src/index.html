@@ -80,7 +80,7 @@ footer{border-top:1px solid var(--border);padding:20px 24px;text-align:center;ma
     <div class="hero">
       <div class="sans" style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">İK'nın içinden</div>
       <h1>CV'ni analiz et,<br><em>mülakata hazır gir.</em></h1>
-      <p class="sans" style="font-size:15px;color:var(--text-mid);line-height:1.7">İş ilanını yapıştır, CV'ni ekle. Güçlü ve zayıf yönlerin, mülakat ipuçları, STAR hikayeleri ve ilk 3 gün planın saniyeler içinde hazır.</p>
+      <p class="sans" style="font-size:15px;color:var(--text-mid);line-height:1.7">İş ilanını yapıştır, CV'ni ekle. Güçlü ve zayıf yönlerin, ATS uyum skorun, mülakat ipuçları ve STAR hikayelerin saniyeler içinde hazır.</p>
     </div>
     <div class="card">
       <div class="field-label">İş İlanı <span style="color:var(--red)">*</span></div>
@@ -142,7 +142,7 @@ footer{border-top:1px solid var(--border);padding:20px 24px;text-align:center;ma
     <div class="tabs">
       <button class="tab active" onclick="setTabA(0,this)">🏢 Şirket</button>
       <button class="tab" onclick="setTabA(1,this)">💪 Güçlü & Zayıf</button>
-      <button class="tab" onclick="setTabA(2,this)">📊 İK Analizi</button>
+      <button class="tab" onclick="setTabA(2,this)">📊 İK Analizi & ATS Skoru</button>
     </div>
 
     <div id="tp0" class="tab-panel active">
@@ -180,6 +180,7 @@ footer{border-top:1px solid var(--border);padding:20px 24px;text-align:center;ma
           <p id="ats-aciklama" class="sans" style="font-size:14px;line-height:1.7;color:var(--text-mid)"></p>
         </div>
         <div id="ats-sorunlar"></div>
+        <div id="ats-oneriler"></div>
       </div>
       <div class="card"><div class="section-label">CV'de Değiştirilmesi Gereken Cümleler</div><div id="cv-duzelt-list"></div></div>
     </div>
@@ -309,8 +310,8 @@ function go() {
 function buildPrompt(ilan,cv){
   var hasCv=!!(cv&&cv.length>20);
   var score=hasCv?82:70;
-  var p="Sen deneyimli bir IK uzmanisın. Verilen is ilanını"+(hasCv?" ve CV'yi":"")+" analiz et. SADECE JSON dondur. Turkce kullan. Tum stringler tek satirda."+(hasCv?" Ayrica CV'nin ATS (Aday Takip Sistemi) tarafindan ne kadar iyi okunabildigini degerlendir: standart bolum basliklari (Deneyim, Egitim, Beceriler, Iletisim) var mi, metin duzeni bozuk/karisik mi (tablo/sutun kaynakli olabilir), ilan ile anahtar kelime uyumu ne durumda. Bunlara gore 0-100 arasi bir ats skoru ver.":"")+"\n\nIS ILANI:\n"+ilan.slice(0,2000)+(hasCv?"\n\nCV:\n"+cv.slice(0,1500):"");
-  p+="\n\nJSON:\n{\"sirket\":{\"ad\":\"ad\",\"sektor\":\"sektor\",\"kultur\":\"kultur\",\"genel_bilgi\":\"3-4 cumle detay\"},\"uyum_skoru\":"+score+",\"kirmizi_bayraklar\":[\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"],\"guclu_yonler\":"+(hasCv?"[\"g1\",\"g2\",\"g3\",\"g4\",\"g5\"]":"[]")+",\"zayif_yonler\":"+(hasCv?"[\"z1\",\"z2\",\"z3\",\"z4\",\"z5\"]":"[]")+",\"genel_degerlendirme\":\""+(hasCv?"2-3 cumle":"")+"\",\"ise_alinma_olasiligi\":{\"yuzde\":"+(hasCv?72:60)+",\"aciklama\":\"aciklama\",\"olumlu_faktorler\":[\"f1\",\"f2\"],\"olumsuz_faktorler\":[\"f1\",\"f2\"]},\"cv_duzeltmeleri\":"+(hasCv?"[{\"mevcut\":\"eski\",\"onerilern\":\"yeni\"},{\"mevcut\":\"eski2\",\"onerilern\":\"yeni2\"}]":"[]")+",\"ats_uyumu\":"+(hasCv?"{\"skor\":75,\"aciklama\":\"ATS sistemlerinin bu CV'yi ne kadar iyi okuyabildigine dair 1-2 cumle\",\"sorunlar\":[\"sorun1\",\"sorun2\",\"sorun3\"]}":"{\"skor\":0,\"aciklama\":\"\",\"sorunlar\":[]}")+",\"mulakat_ipuclari\":[\"ip1\",\"ip2\",\"ip3\",\"ip4\"],\"ornek_sorular\":[{\"kategori\":\"Deneyim\",\"soru\":\"s\"},{\"kategori\":\"Teknik\",\"soru\":\"s\"},{\"kategori\":\"Davranissal\",\"soru\":\"s\"},{\"kategori\":\"Motivasyon\",\"soru\":\"s\"},{\"kategori\":\"Liderlik\",\"soru\":\"s\"}],\"star_hikayeleri\":[{\"baslik\":\"b\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"},{\"baslik\":\"b2\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"}],\"ise_soracaklar\":[\"s1\",\"s2\",\"s3\",\"s4\",\"s5\"]}";
+  var p="Sen deneyimli bir IK uzmanisın. Verilen is ilanını"+(hasCv?" ve CV'yi":"")+" analiz et. SADECE JSON dondur. Turkce kullan. Tum stringler tek satirda."+(hasCv?" Ayrica CV'nin ATS (Aday Takip Sistemi) tarafindan ne kadar iyi okunabildigini degerlendir: standart bolum basliklari (Deneyim, Egitim, Beceriler, Iletisim) var mi, metin duzeni bozuk/karisik mi (tablo/sutun kaynakli olabilir), ilan ile anahtar kelime uyumu ne durumda. Bunlara gore 0-100 arasi bir ats skoru ver, tespit edilen sorunlari listele ve her sorun icin somut, uygulanabilir bir iyilestirme onerisi sun.":"")+"\n\nIS ILANI:\n"+ilan.slice(0,2000)+(hasCv?"\n\nCV:\n"+cv.slice(0,1500):"");
+  p+="\n\nJSON:\n{\"sirket\":{\"ad\":\"ad\",\"sektor\":\"sektor\",\"kultur\":\"kultur\",\"genel_bilgi\":\"3-4 cumle detay\"},\"uyum_skoru\":"+score+",\"kirmizi_bayraklar\":[\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"],\"guclu_yonler\":"+(hasCv?"[\"g1\",\"g2\",\"g3\",\"g4\",\"g5\"]":"[]")+",\"zayif_yonler\":"+(hasCv?"[\"z1\",\"z2\",\"z3\",\"z4\",\"z5\"]":"[]")+",\"genel_degerlendirme\":\""+(hasCv?"2-3 cumle":"")+"\",\"ise_alinma_olasiligi\":{\"yuzde\":"+(hasCv?72:60)+",\"aciklama\":\"aciklama\",\"olumlu_faktorler\":[\"f1\",\"f2\"],\"olumsuz_faktorler\":[\"f1\",\"f2\"]},\"cv_duzeltmeleri\":"+(hasCv?"[{\"mevcut\":\"eski\",\"onerilern\":\"yeni\"},{\"mevcut\":\"eski2\",\"onerilern\":\"yeni2\"}]":"[]")+",\"ats_uyumu\":"+(hasCv?"{\"skor\":75,\"aciklama\":\"ATS sistemlerinin bu CV'yi ne kadar iyi okuyabildigine dair 1-2 cumle\",\"sorunlar\":[\"sorun1\",\"sorun2\",\"sorun3\"],\"oneriler\":[\"oneri1\",\"oneri2\",\"oneri3\"]}":"{\"skor\":0,\"aciklama\":\"\",\"sorunlar\":[],\"oneriler\":[]}")+",\"mulakat_ipuclari\":[\"ip1\",\"ip2\",\"ip3\",\"ip4\"],\"ornek_sorular\":[{\"kategori\":\"Deneyim\",\"soru\":\"s\"},{\"kategori\":\"Teknik\",\"soru\":\"s\"},{\"kategori\":\"Davranissal\",\"soru\":\"s\"},{\"kategori\":\"Motivasyon\",\"soru\":\"s\"},{\"kategori\":\"Liderlik\",\"soru\":\"s\"}],\"star_hikayeleri\":[{\"baslik\":\"b\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"},{\"baslik\":\"b2\",\"durum\":\"d\",\"gorev\":\"g\",\"eylem\":\"e\",\"sonuc\":\"s\"}],\"ise_soracaklar\":[\"s1\",\"s2\",\"s3\",\"s4\",\"s5\"]}";
   return p;
 }
 
@@ -340,6 +341,10 @@ function renderResult(d){
     document.getElementById("ats-pct").textContent="%"+atsScore;document.getElementById("ats-pct").style.color=sc(atsScore);
     document.getElementById("ats-aciklama").textContent=ats.aciklama||"";
     document.getElementById("ats-sorunlar").innerHTML=(ats.sorunlar||[]).map(function(so){return "<div class='sans' style='font-size:13px;margin-bottom:8px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--red);flex-shrink:0'>⚠</span>"+so+"</div>";}).join("");
+    var oneriler=ats.oneriler||[];
+    if(oneriler.length){
+      document.getElementById("ats-oneriler").innerHTML="<div class='sans' style='font-size:11px;font-weight:700;color:var(--green);margin-top:14px;margin-bottom:8px;letter-spacing:1px'>İYİLEŞTİRME ÖNERİLERİ</div>"+oneriler.map(function(o){return "<div class='sans' style='font-size:13px;margin-bottom:8px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--green);flex-shrink:0'>✓</span>"+o+"</div>";}).join("");
+    }
   }
   var bayraklar=(d.kirmizi_bayraklar||[]).filter(Boolean);
   if(bayraklar.length){document.getElementById("bayrak-card").style.display="block";document.getElementById("bayrak-list").innerHTML=bayraklar.map(function(k){return "<div class='sans' style='font-size:13px;margin-bottom:8px;display:flex;gap:8px;line-height:1.5'><span style='color:var(--red);flex-shrink:0'>—</span>"+k+"</div>";}).join("");}
