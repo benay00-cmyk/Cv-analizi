@@ -69,7 +69,7 @@ app.post("/api/analyze", async (req, res) => {
   try {
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 3000,
+      max_tokens: 8000,
       system:
         "You are an HR expert. Return ONLY valid JSON. No markdown. All strings single-line. Use Turkish.",
       messages: [{ role: "user", content: userMessage }],
